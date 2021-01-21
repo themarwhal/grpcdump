@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"time"
 
 	"github.com/rmedvedev/grpcdump/internal/app/filter"
 	"github.com/rmedvedev/grpcdump/internal/app/httpparser"
@@ -30,16 +31,19 @@ func main() {
 	if err != nil {
 		logrus.Fatal("Logger init error: ", err)
 	}
+    kickoffGrpcdump(config.GetConfig().Iface, config.GetConfig().Port)
+}
 
-	logrus.Infof("Starting sniff ethernet packets at interface %s on port %d", config.GetConfig().Iface, config.GetConfig().Port)
+func kickoffGrpcdump(iface string, port uint) {
+    logrus.Infof("Starting sniff ethernet packets at interface %s on port %d", iface, port)
 
-	provider, err := packetprovider.NewEthernetProvider(config.GetConfig().Iface)
+	provider, err := packetprovider.NewEthernetProvider(iface)
 	if err != nil {
 		logrus.Fatal("Error to create packet provider", err)
 	}
 
 	packetFilter := filter.New()
-	packetFilter.SetPort(uint32(config.GetConfig().Port))
+	packetFilter.SetPort(uint32(port))
 
 	err = provider.SetFilter(packetFilter)
 	if err != nil {
@@ -70,7 +74,7 @@ func renderOutput(models chan models.RenderModel) {
 	for {
 		select {
 		case model := <-models:
-			fmt.Println(renderer.Render(model))
+            fmt.Println(time.Now().Format("2006-01-02 15:04:05.000000") + renderer.Render(model))
 		}
 	}
 }
