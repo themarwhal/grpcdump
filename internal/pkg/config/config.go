@@ -3,12 +3,13 @@ package config
 import (
 	"flag"
 	"strings"
+	"strconv"
 )
 
 //Config represents config model
 type Config struct {
 	Iface          string
-	Port           uint
+	Ports           []uint
 	LogMetaHeaders string
 	LoggerLevel    string
 	ColorOutput    bool
@@ -21,7 +22,7 @@ var config *Config
 
 var (
 	iface          = flag.String("i", "eth0", "Interface to get packets from")
-	port           = flag.Uint("p", 80, "TCP port")
+	ports           = flag.String("p", "80", "A list of TCP ports")
 	logMetaHeaders = flag.String("meta", "*", "Comma separated list of properties meta info for http2")
 	loggerLevel    = flag.String("log-level", "info", "Logger level")
 	colorOutput    = flag.Bool("color", false, "Output with color")
@@ -33,10 +34,17 @@ var (
 //Init inits config
 func Init() {
 	flag.Parse()
-
+    portsStr := strings.Split(*ports, ",")
+    portsInt := []uint{}
+    for _, port := range portsStr {
+        i, err := strconv.Atoi(port)
+        if err == nil {
+           portsInt = append(portsInt, uint(i))
+        }
+    }
 	config = &Config{
 		*iface,
-		*port,
+		portsInt,
 		*logMetaHeaders,
 		*loggerLevel,
 		*colorOutput,

@@ -1,9 +1,12 @@
 package main
 
 import (
+    "context"
 	"flag"
 	"fmt"
 	"time"
+	"os"
+	"os/signal"
 
 	"github.com/rmedvedev/grpcdump/internal/app/filter"
 	"github.com/rmedvedev/grpcdump/internal/app/httpparser"
@@ -31,10 +34,21 @@ func main() {
 	if err != nil {
 		logrus.Fatal("Logger init error: ", err)
 	}
-    kickoffGrpcdump(config.GetConfig().Iface, config.GetConfig().Port)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	for _, port := range config.GetConfig().Ports {
+	    go kickoffGrpcdump(ctx, config.GetConfig().Iface, port)
+	}
+	// Wait for SIGINT.
+    sig := make(chan os.Signal, 1)
+    signal.Notify(sig, os.Interrupt)
+    <-sig
+    // Terminate all go routines
+	cancel()
 }
 
-func kickoffGrpcdump(iface string, port uint) {
+func kickoffGrpcdump(ctx context.Context, iface string, port uint) {
     logrus.Infof("Starting sniff ethernet packets at interface %s on port %d", iface, port)
 
 	provider, err := packetprovider.NewEthernetProvider(iface)
@@ -65,6 +79,8 @@ func kickoffGrpcdump(iface string, port uint) {
 			if err != nil {
 				logrus.Warning(err)
 			}
+		case <- ctx.Done():
+		    return
 		}
 	}
 }
